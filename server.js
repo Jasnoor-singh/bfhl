@@ -180,10 +180,14 @@ function detectCycle(nodes, parentChildren) {
 function buildTree(node, parentChildren) {
   const children = parentChildren.get(node) || [];
   const subtree = {};
+
   for (const child of children) {
-    subtree[child] = buildTree(child, parentChildren);
+    subtree[child] = buildTree(child, parentChildren)[child];
   }
-  return { [node]: subtree };
+
+  return {
+    [node]: subtree
+  };
 }
 
 function calcDepth(node, parentChildren) {
