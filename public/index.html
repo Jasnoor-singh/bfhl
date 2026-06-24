@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BFHL — Hierarchy Analyser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --paper:  #F7F6F3;
+      --ink:    #1A1A18;
+      --stone:  #E8E5DF;
+      --muted:  #8C8880;
+      --rust:   #B85C38;
+      --mono:   'IBM Plex Mono', monospace;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 40px 0 28px;
+      border-bottom: 1px solid var(--ink);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header .label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 0 80px;
+    }
+
+    section + section { margin-top: 40px; }
+
+    /* ── INPUT ── */
+    .field-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--ink);
+      padding: 8px 0 12px;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--ink);
+      resize: vertical;
+      outline: none;
+      line-height: 1.7;
+    }
+    textarea::placeholder { color: var(--muted); }
+
+    .examples {
+      margin-top: 12px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .examples span { font-size: 11px; color: var(--muted); }
+    .ex-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: none;
+      border: 1px solid var(--stone);
+      border-radius: 2px;
+      padding: 2px 8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .ex-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button.run {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--rust);
+      color: var(--paper);
+      border: none;
+      padding: 10px 24px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s;
+    }
+    button.run:hover { opacity: 0.88; }
+    button.run:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    button.clear-btn {
+      font-family: var(--mono);
+      font-size: 13px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 10px 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    button.clear-btn:hover { color: var(--ink); }
+
+    /* ── ERROR ── */
+    .error {
+      font-size: 13px;
+      color: var(--rust);
+      border-left: 2px solid var(--rust);
+      padding-left: 12px;
+      margin-top: 16px;
+    }
+    .hidden { display: none !important; }
+
+    /* ── RESULTS ── */
+    #results { margin-top: 48px; }
+
+    .section-head {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--stone);
+      padding-bottom: 6px;
+      margin-bottom: 18px;
+    }
+
+    /* Meta */
+    .meta-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      border: 1px solid var(--stone);
+    }
+    .meta-cell {
+      padding: 12px 14px;
+      border-right: 1px solid var(--stone);
+    }
+    .meta-cell:last-child { border-right: none; }
+    .meta-cell .mk {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .meta-cell .mv { font-size: 13px; font-weight: 500; word-break: break-all; }
+
+    /* Summary */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--stone);
+      border: 1px solid var(--stone);
+    }
+    .stat { background: var(--paper); padding: 20px 16px; }
+    .stat .sv {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      display: block;
+    }
+    .stat .sl {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Tags */
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag { font-size: 12px; padding: 3px 8px; border: 1px solid; }
+    .tag-inv  { border-color: var(--rust); color: var(--rust); }
+    .tag-dup  { border-color: var(--muted); color: var(--muted); }
+    .tag-none { color: var(--muted); font-size: 13px; border: none; padding: 0; }
+
+    /* Hierarchies */
+    .hier-list {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--stone);
+    }
+    .hier-item {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--stone);
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .hier-root {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      padding-top: 2px;
+    }
+    .hier-root.cycle-root { color: var(--rust); }
+    .hier-meta {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .hier-meta span { margin-right: 16px; }
+    .tree-block {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--ink);
+    }
+    .tree-block .node   { color: var(--ink); font-weight: 500; }
+    .tree-block .branch { color: var(--muted); }
+    .cycle-note { font-size: 13px; color: var(--rust); }
+
+    /* JSON toggle */
+    .json-wrap {
+      margin-top: 40px;
+      border-top: 1px solid var(--stone);
+      padding-top: 16px;
+    }
+    .json-toggle-btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .json-toggle-btn:hover { color: var(--ink); }
+    .json-out {
+      margin-top: 16px;
+      background: var(--stone);
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 720px) {
+      header, main { padding-left: 20px; padding-right: 20px; }
+      .meta-row { grid-template-columns: 1fr; }
+      .summary-row { grid-template-columns: 1fr; }
+      .meta-cell { border-right: none; border-bottom: 1px solid var(--stone); }
+      .meta-cell:last-child { border-bottom: none; }
+      .hier-item { grid-template-columns: 36px 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="label">POST /bfhl</div>
+  <h1>Hierarchy Analyser</h1>
+</header>
+
+<main>
+  <section>
+    <label class="field-label" for="inputArea">Node edges</label>
+    <textarea id="inputArea" placeholder="A->B, A->C, B->D, X->Y, Y->Z, Z->X"></textarea>
+
+    <div class="examples">
+      <span>Try:</span>
+      <button class="ex-btn" onclick="load('simple')">simple tree</button>
+      <button class="ex-btn" onclick="load('cycle')">cycle</button>
+      <button class="ex-btn" onclick="load('full')">full example</button>
+      <button class="ex-btn" onclick="load('diamond')">diamond</button>
+    </div>
+
+    <div class="actions">
+      <button class="run" id="runBtn" onclick="run()">Run</button>
+      <button class="clear-btn" onclick="clearAll()">Clear</button>
+    </div>
+
+    <div id="errorBox" class="error hidden"></div>
+  </section>
+
+  <div id="results" class="hidden">
+
+    <section>
+      <div class="section-head">Request identity</div>
+      <div class="meta-row">
+        <div class="meta-cell"><span class="mk">User</span><span class="mv" id="mUser"></span></div>
+        <div class="meta-cell"><span class="mk">Email</span><span class="mv" id="mEmail"></span></div>
+        <div class="meta-cell"><span class="mk">Roll</span><span class="mv" id="mRoll"></span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">Summary</div>
+      <div class="summary-row">
+        <div class="stat"><span class="sv" id="sTrees"></span><span class="sl">Valid trees</span></div>
+        <div class="stat"><span class="sv" id="sCycles"></span><span class="sl">Cycles</span></div>
+        <div class="stat"><span class="sv" id="sRoot"></span><span class="sl">Deepest root</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">Invalid entries</div>
+      <div class="tag-row" id="invalidList"></div>
+    </section>
+
+    <section>
+      <div class="section-head">Duplicate edges</div>
+      <div class="tag-row" id="dupList"></div>
+    </section>
+
+    <section>
+      <div class="section-head">Hierarchies</div>
+      <div class="hier-list" id="hierList"></div>
+    </section>
+
+    <div class="json-wrap">
+      <button class="json-toggle-btn" onclick="toggleJson()">show raw JSON</button>
+      <pre id="jsonOut" class="json-out hidden"></pre>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const EXAMPLES = {
+    simple:  'A->B, A->C, B->D',
+    cycle:   'X->Y, Y->Z, Z->X',
+    full:    'A->B, A->C, B->D, C->E, E->F, X->Y, Y->Z, Z->X, P->Q, Q->R, G->H, G->H, G->I, hello, 1->2, A->',
+    diamond: 'A->B, A->C, B->D, C->D, D->E'
+  };
+
+  function load(k) { document.getElementById('inputArea').value = EXAMPLES[k]; }
+
+  function clearAll() {
+    document.getElementById('inputArea').value = '';
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('errorBox').classList.add('hidden');
+    document.getElementById('jsonOut').classList.add('hidden');
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = msg;
+    b.classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+  }
+
+  async function run() {
+    const raw = document.getElementById('inputArea').value.trim();
+    if (!raw) { showError('Enter at least one edge, e.g. A->B'); return; }
+
+    const data = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.textContent = '…';
+    document.getElementById('errorBox').classList.add('hidden');
+
+    try {
+      const res = await fetch('/bfhl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data })
+      });
+      const json = await res.json();
+      if (!res.ok) { showError(json.error || 'API error'); return; }
+      render(json);
+    } catch {
+      showError('Could not reach /bfhl — is the server running?');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run';
+    }
+  }
+
+  function render(json) {
+    document.getElementById('results').classList.remove('hidden');
+
+    document.getElementById('mUser').textContent  = json.user_id;
+    document.getElementById('mEmail').textContent = json.email_id;
+    document.getElementById('mRoll').textContent  = json.college_roll_number;
+
+    const s = json.summary;
+    document.getElementById('sTrees').textContent  = s.total_trees;
+    document.getElementById('sCycles').textContent = s.total_cycles;
+    document.getElementById('sRoot').textContent   = s.largest_tree_root || '—';
+
+    const inv = json.invalid_entries;
+    document.getElementById('invalidList').innerHTML = inv.length
+      ? inv.map(e => `<span class="tag tag-inv">${e}</span>`).join('')
+      : `<span class="tag-none">none</span>`;
+
+    const dup = json.duplicate_edges;
+    document.getElementById('dupList').innerHTML = dup.length
+      ? dup.map(e => `<span class="tag tag-dup">${e}</span>`).join('')
+      : `<span class="tag-none">none</span>`;
+
+    document.getElementById('hierList').innerHTML = json.hierarchies.map(h => {
+      const rootClass = h.has_cycle ? 'hier-root cycle-root' : 'hier-root';
+      const metaStr = h.has_cycle
+        ? `<span>cycle</span>`
+        : `<span>depth ${h.depth}</span>`;
+      const content = h.has_cycle
+        ? `<div class="cycle-note">Circular — no tree structure.</div>`
+        : `<div class="tree-block">${buildTreeText(h.tree, h.root, '', true)}</div>`;
+
+      return `<div class="hier-item">
+        <div class="${rootClass}">${h.root}</div>
+        <div>
+          <div class="hier-meta">${metaStr}</div>
+          ${content}
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('jsonOut').textContent = JSON.stringify(json, null, 2);
+    document.getElementById('jsonOut').classList.add('hidden');
+    document.querySelector('.json-toggle-btn').textContent = 'show raw JSON';
+
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function buildTreeText(treeObj, node, prefix, isLast) {
+    const subtree = treeObj[node] || {};
+    const children = Object.keys(subtree);
+    const connector  = prefix === '' ? '' : isLast ? '└─ ' : '├─ ';
+    const branchPfx  = prefix === '' ? '' : isLast ? '   ' : '│  ';
+
+    let out = `<span class="branch">${prefix}${connector}</span><span class="node">${node}</span>\n`;
+    children.forEach((child, i) => {
+      out += buildTreeText({ [child]: subtree[child] }, child, prefix + branchPfx, i === children.length - 1);
+    });
+    return out;
+  }
+
+  function toggleJson() {
+    const el  = document.getElementById('jsonOut');
+    const btn = document.querySelector('.json-toggle-btn');
+    const hidden = el.classList.toggle('hidden');
+    btn.textContent = hidden ? 'show raw JSON' : 'hide raw JSON';
+  }
+
+  document.getElementById('inputArea').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') run();
+  });
+</script>
+</body>
+</html>
